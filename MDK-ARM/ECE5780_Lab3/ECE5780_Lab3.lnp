@@ -1,0 +1,25 @@
+--cpu Cortex-M0
+"ece5780_lab3\startup_stm32f072xb.o"
+"ece5780_lab3\main.o"
+"ece5780_lab3\stm32f0xx_it.o"
+"ece5780_lab3\stm32f0xx_hal_msp.o"
+"ece5780_lab3\stm32f0xx_hal_tim.o"
+"ece5780_lab3\stm32f0xx_hal_tim_ex.o"
+"ece5780_lab3\stm32f0xx_hal_rcc.o"
+"ece5780_lab3\stm32f0xx_hal_rcc_ex.o"
+"ece5780_lab3\stm32f0xx_hal.o"
+"ece5780_lab3\stm32f0xx_hal_i2c.o"
+"ece5780_lab3\stm32f0xx_hal_i2c_ex.o"
+"ece5780_lab3\stm32f0xx_hal_gpio.o"
+"ece5780_lab3\stm32f0xx_hal_dma.o"
+"ece5780_lab3\stm32f0xx_hal_cortex.o"
+"ece5780_lab3\stm32f0xx_hal_pwr.o"
+"ece5780_lab3\stm32f0xx_hal_pwr_ex.o"
+"ece5780_lab3\stm32f0xx_hal_flash.o"
+"ece5780_lab3\stm32f0xx_hal_flash_ex.o"
+"ece5780_lab3\stm32f0xx_hal_exti.o"
+"ece5780_lab3\system_stm32f0xx.o"
+--strict --scatter "ECE5780_Lab3\ECE5780_Lab3.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "ECE5780_Lab3.map" -o ECE5780_Lab3\ECE5780_Lab3.axf
