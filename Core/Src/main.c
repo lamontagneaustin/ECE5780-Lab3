@@ -62,40 +62,43 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
   SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	
+	RCC->AHBENR |= (RCC_AHBENR_GPIOAEN)|(RCC_AHBENR_GPIOCEN); // Enables the GPIOA/GPIOC clock in the RCC.
+	RCC->APB1ENR |= (RCC_APB1ENR_TIM2EN); // Enables the TIM2 clock in the RCC.
+	
+	// Configures GPIOC Pins 8 and 9 (ORANGE LED and GREEN LED)
+	GPIOC->MODER   |=  (1 << 16) | (1 << 18);
+	GPIOC->OTYPER  &= ~((1 << 8) | (1 << 9));
+	GPIOC->OSPEEDR &= ~((1 << 16) | (1 << 18));
+	GPIOC->PUPDR   &= ~((1 << 16) | (1 << 17) | (1 << 18) | (1 << 19));
+	
+	// Configures GPIOC Pins 6 and 7 (RED LED and BLUE LED)
+	GPIOC->MODER   |=  (1 << 12) | (1 << 14);
+	GPIOC->OTYPER  &= ~((1 << 6) | (1 << 7));
+	GPIOC->OSPEEDR &= ~((1 << 12) | (1 << 14));
+	GPIOC->PUPDR   &= ~((1 << 12) | (1 << 13) | (1 << 14) | (1 << 15));
+	
+	// Configures TIM2 Peripheral.
+	TIM2->PSC |= (0xF9FF); // 63999 PSC which divides by 64000 on 8MHz Clock.
+	TIM2->ARR |= (0x0000001F); // 31 ARR value which makes the interrupt 4.03 Hz.
+	TIM2->DIER |= (1 << 0); // Enables Update Interrupt.
+	TIM2->CR1 |= (1 << 0); // Counter enable.
+	NVIC_EnableIRQ(TIM2_IRQn);
+	NVIC_SetPriority(TIM2_IRQn, 1);
+	
+	HAL_GPIO_WritePin(GPIOC, 8, 1)
   while (1)
   {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
+		HAL_Delay(200);
+		HAL_GPIO_TogglePin(GPIOC, 7);
   }
-  /* USER CODE END 3 */
+}
+
+void TIM2_IRQHandler(void) {
+		HAL_GPIO_TogglePin(GPIOC, 8);
+		HAL_GPIO_TogglePin(GPIOC, 9);
 }
 
 /**
