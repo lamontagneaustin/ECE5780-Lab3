@@ -65,8 +65,8 @@ int main(void)
   HAL_Init();
   SystemClock_Config();
 	
-	RCC->AHBENR |= (RCC_AHBENR_GPIOAEN)|(RCC_AHBENR_GPIOCEN)|(RCC_APB2ENR_SYSCFGEN); // Enables the GPIOA/GPIOC/SYSCFG clock in the RCC.
-	RCC->APB1ENR |= (RCC_APB1ENR_TIM2EN); // Enables the TIM2 clock in the RCC.
+	RCC->AHBENR  |= (RCC_AHBENR_GPIOAEN)|(RCC_AHBENR_GPIOCEN); // Enables the GPIOA/GPIOC clock in the RCC.
+	RCC->APB1ENR |= (RCC_APB1ENR_TIM2EN) | (RCC_APB1ENR_TIM3EN); // Enables the TIM2/TIM3 clock in the RCC.
 	
 	// Configures GPIOC Pins 8 and 9 (ORANGE LED and GREEN LED)
 	GPIOC->MODER   |=  (1 << 16) | (1 << 18);
@@ -75,33 +75,33 @@ int main(void)
 	GPIOC->PUPDR   &= ~((1 << 16) | (1 << 17) | (1 << 18) | (1 << 19));
 	
 	// Configures GPIOC Pins 6 and 7 (RED LED and BLUE LED)
-	GPIOC->MODER   |=  (1 << 12) | (1 << 14);
-	GPIOC->OTYPER  &= ~((1 << 6) | (1 << 7));
-	GPIOC->OSPEEDR &= ~((1 << 12) | (1 << 14));
-	GPIOC->PUPDR   &= ~((1 << 12) | (1 << 13) | (1 << 14) | (1 << 15));
+	GPIOC->MODER   |=  (1 << 13) | (1 << 15);
+	GPIOC->MODER   &=  ~((1 << 12) | (1 << 14));
+	GPIOC->AFR[0] &= ~((1 << 24)|(1 << 25)|(1 << 26)|(1 << 27));
+	GPIOC->AFR[0] &= ~((1 << 28)|(1 << 29)|(1 << 30)|(1 << 31));
 	
-	/*
-	// Configures GPIOA Pin 0 (TIM2)
-	GPIOA->MODER   &= ~(1 << 0);
-	GPIOA->MODER   |=  (1 << 1);
-	GPIOA->OTYPER  &=  ~(1 << 0);
-	GPIOA->OSPEEDR &= ~(1 << 0);
-	GPIOA->PUPDR   &= ~(1 << 0);
-	GPIOA->PUPDR   |=  (1 << 1);
-	*/
-	
-	
-	// Configures TIM2 Peripheral.
-	TIM2->PSC  = (0x4E1F); // 19999 PSC which divides by 20000 on 8MHz Clock.
-	TIM2->ARR  = (0x64); // 100 ARR value which makes the interrupt 4.00 Hz.
+	// Configures TIM2 Peripheral for Interrupt.
+	TIM2->PSC   = (0x4E1F); // 19999 PSC which divides by 20000 on 8MHz Clock.
+	TIM2->ARR   = (0x64); // 100 ARR value which makes the interrupt 4.00 Hz.
 	TIM2->DIER |= (1 << 0); // Enables Update Interrupt.
 	TIM2->CR1  |= (1 << 0); // Counter enable.
 	
-	/*
-	EXTI->IMR         |= (1 << 0);
-	EXTI->RTSR        |= (1 << 0);
-	SYSCFG->EXTICR[0] &= ~((1 << 0) | (1 << 1) | (1 << 2) | (1 << 3));
-	*/
+	// Configures TIM3 Peripheral for PWM.
+	TIM3->PSC    =  (0x63); // Sets PSC to 99.
+	TIM3->ARR    =  (0x64); // Sets ARR to 100.
+	TIM3->CCMR1 &= ~((1 << 0)|(1 << 1));
+	TIM3->CCMR1 &= ~((1 << 8)|(1 << 9));
+	TIM3->CCMR1 |=  (1 << 4)|(1 << 5)|(1 << 6);
+	TIM3->CCMR1 |=  (1 << 13)|(1 << 14);
+	TIM3->CCMR1 &= ~(1 << 12);
+	TIM3->CCMR1 |=  (1 << 3)|(1 << 11); // Enable Compare 1 and 2 preload.
+	
+	TIM3->CCER |= (1 << 0)|(1 << 4); // Set output enable bits for channels 1 and 2.
+	TIM3->CCR1  = (0x5F);            // 20% of ARR, ARR=100 so CCR1=20
+	TIM3->CCR2  = (0x5);            // 20% of ARR, ARR=100 so CCR2=20
+	
+	TIM3->CR1  |= (1 << 0); // Counter enable.
+	
 	
 	NVIC_EnableIRQ(TIM2_IRQn);
 	//NVIC_SetPriority(TIM2_IRQn, 1);
@@ -109,6 +109,7 @@ int main(void)
 	GPIOC->BSRR |= (1 << 8); // Start PC8 (ORANGE) High.
   while (1)
   {
+		/*
 		HAL_Delay(1000);
 		// Toggle Pin PC6 (RED).
 		if(GPIOC->IDR & 0x40){
@@ -117,11 +118,14 @@ int main(void)
 		else{
 			GPIOC->BSRR |= (1 << 6); // Sets State of PC6.
 		}
+		*/
   }
 }
 
+/**
+  * @brief  TIM2 Interrupt Handler.
+  */
 void TIM2_IRQHandler(void) {
-	//GPIOC->BSRR |= (1 << 7); // Start PC7 (BLUE) High.
 	
 	// Toggle Pin PC8 (ORANGE).
 	if(GPIOC->IDR & 0x100){
@@ -139,7 +143,6 @@ void TIM2_IRQHandler(void) {
 		GPIOC->BSRR |= (1 << 9); // Sets State of PC9.
 	}
 	
-	//EXTI->PR |= (1 << 0);
 	TIM2->SR &= ~(1 << 0);
 }
 
