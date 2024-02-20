@@ -65,7 +65,7 @@ int main(void)
   HAL_Init();
   SystemClock_Config();
 	
-	RCC->AHBENR |= (RCC_AHBENR_GPIOAEN)|(RCC_AHBENR_GPIOCEN); // Enables the GPIOA/GPIOC clock in the RCC.
+	RCC->AHBENR |= (RCC_AHBENR_GPIOAEN)|(RCC_AHBENR_GPIOCEN)|(RCC_APB2ENR_SYSCFGEN); // Enables the GPIOA/GPIOC/SYSCFG clock in the RCC.
 	RCC->APB1ENR |= (RCC_APB1ENR_TIM2EN); // Enables the TIM2 clock in the RCC.
 	
 	// Configures GPIOC Pins 8 and 9 (ORANGE LED and GREEN LED)
@@ -80,25 +80,67 @@ int main(void)
 	GPIOC->OSPEEDR &= ~((1 << 12) | (1 << 14));
 	GPIOC->PUPDR   &= ~((1 << 12) | (1 << 13) | (1 << 14) | (1 << 15));
 	
-	// Configures TIM2 Peripheral.
-	TIM2->PSC |= (0xF9FF); // 63999 PSC which divides by 64000 on 8MHz Clock.
-	TIM2->ARR |= (0x0000001F); // 31 ARR value which makes the interrupt 4.03 Hz.
-	TIM2->DIER |= (1 << 0); // Enables Update Interrupt.
-	TIM2->CR1 |= (1 << 0); // Counter enable.
-	NVIC_EnableIRQ(TIM2_IRQn);
-	NVIC_SetPriority(TIM2_IRQn, 1);
+	/*
+	// Configures GPIOA Pin 0 (TIM2)
+	GPIOA->MODER   &= ~(1 << 0);
+	GPIOA->MODER   |=  (1 << 1);
+	GPIOA->OTYPER  &=  ~(1 << 0);
+	GPIOA->OSPEEDR &= ~(1 << 0);
+	GPIOA->PUPDR   &= ~(1 << 0);
+	GPIOA->PUPDR   |=  (1 << 1);
+	*/
 	
-	HAL_GPIO_WritePin(GPIOC, 8, 1)
+	
+	// Configures TIM2 Peripheral.
+	TIM2->PSC  = (0x4E1F); // 19999 PSC which divides by 20000 on 8MHz Clock.
+	TIM2->ARR  = (0x64); // 100 ARR value which makes the interrupt 4.00 Hz.
+	TIM2->DIER |= (1 << 0); // Enables Update Interrupt.
+	TIM2->CR1  |= (1 << 0); // Counter enable.
+	
+	/*
+	EXTI->IMR         |= (1 << 0);
+	EXTI->RTSR        |= (1 << 0);
+	SYSCFG->EXTICR[0] &= ~((1 << 0) | (1 << 1) | (1 << 2) | (1 << 3));
+	*/
+	
+	NVIC_EnableIRQ(TIM2_IRQn);
+	//NVIC_SetPriority(TIM2_IRQn, 1);
+	
+	GPIOC->BSRR |= (1 << 8); // Start PC8 (ORANGE) High.
   while (1)
   {
-		HAL_Delay(200);
-		HAL_GPIO_TogglePin(GPIOC, 7);
+		HAL_Delay(1000);
+		// Toggle Pin PC6 (RED).
+		if(GPIOC->IDR & 0x40){
+			GPIOC->BSRR |= (1 << 22); // Resets State of PC6.
+		}
+		else{
+			GPIOC->BSRR |= (1 << 6); // Sets State of PC6.
+		}
   }
 }
 
 void TIM2_IRQHandler(void) {
-		HAL_GPIO_TogglePin(GPIOC, 8);
-		HAL_GPIO_TogglePin(GPIOC, 9);
+	//GPIOC->BSRR |= (1 << 7); // Start PC7 (BLUE) High.
+	
+	// Toggle Pin PC8 (ORANGE).
+	if(GPIOC->IDR & 0x100){
+		GPIOC->BSRR |= (1 << 24); // Resets State of PC8.
+	}
+	else{
+		GPIOC->BSRR |= (1 << 8); // Sets State of PC8.
+	}
+	
+	// Toggle Pin PC9 (GREEN).
+	if(GPIOC->IDR & 0x200){
+		GPIOC->BSRR |= (1 << 25); // Resets State of PC9.
+	}
+	else{
+		GPIOC->BSRR |= (1 << 9); // Sets State of PC9.
+	}
+	
+	//EXTI->PR |= (1 << 0);
+	TIM2->SR &= ~(1 << 0);
 }
 
 /**
